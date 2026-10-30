@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>NOIR TV — Launcher</title>
+<style>
+:root{
+  --bg:#050505;--panel:#0d0d0f;--line:rgba(255,255,255,.12);
+  --muted:#8c8c91;--white:#fff;--ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#fff;
+font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;border:0;outline:0}
+button:focus-visible{outline:2px solid #fff;outline-offset:4px}
+#app{position:fixed;inset:0;background:#000;overflow:hidden}
+.noise{position:absolute;inset:0;pointer-events:none;opacity:.035;z-index:3;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E")}
+
+#intro{position:absolute;inset:0;z-index:100;background:#000;display:grid;place-items:center;
+transition:opacity .75s var(--ease),visibility .75s;overflow:hidden}
+#intro.done{opacity:0;visibility:hidden;pointer-events:none}
+.intro-core{text-align:center;width:min(520px,82vw);position:relative;z-index:2}
+.intro-mark{width:92px;height:92px;margin:auto;border:1px solid rgba(255,255,255,.65);
+border-radius:28px;display:grid;place-items:center;position:relative;transform:rotate(-8deg);
+box-shadow:0 0 70px rgba(255,255,255,.12);animation:markIn 1s var(--ease) both}
+.intro-mark:before,.intro-mark:after{content:"";position:absolute;border-radius:inherit;border:1px solid rgba(255,255,255,.16)}
+.intro-mark:before{inset:-12px;animation:ring 2.5s ease-in-out infinite}
+.intro-mark:after{inset:-25px;opacity:.5}
+.intro-mark svg{width:42px;transform:rotate(8deg)}
+.intro-name{margin-top:28px;font-size:clamp(24px,5vw,42px);font-weight:800;letter-spacing:.34em;
+padding-left:.34em;animation:textIn .8s .15s var(--ease) both}
+.intro-sub{margin-top:9px;color:#666;font-size:10px;letter-spacing:.32em;padding-left:.32em;text-transform:uppercase;
+animation:textIn .8s .25s var(--ease) both}
+.progress{height:2px;background:#202024;border-radius:2px;margin:42px auto 0;width:min(360px,70vw);overflow:hidden}
+.progress i{display:block;width:0;height:100%;background:#fff;box-shadow:0 0 18px #fff;transition:width .12s linear}
+.progress-row{display:flex;justify-content:space-between;width:min(360px,70vw);margin:10px auto 0;
+font-size:9px;color:#555;letter-spacing:.18em;text-transform:uppercase}
+#percent{color:#aaa}
+.intro-status{margin-top:14px;font-size:9px;color:#444;letter-spacing:.2em;text-transform:uppercase;height:12px}
+
+#main{position:absolute;inset:0;opacity:0;transform:scale(1.025);transition:opacity .9s var(--ease),transform 1.1s var(--ease)}
+#main.ready{opacity:1;transform:none}
+.bg{position:absolute;inset:-15%;transition:background .8s var(--ease),transform 1.4s var(--ease);
+background:
+radial-gradient(circle at 50% 45%,rgba(255,255,255,.10),transparent 28%),
+radial-gradient(circle at 15% 90%,rgba(255,255,255,.035),transparent 28%),
+linear-gradient(180deg,#0a0a0c,#030303 70%);animation:ambient 9s ease-in-out infinite alternate}
+.grid{position:absolute;inset:0;opacity:.16;background-size:60px 60px;
+background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+mask-image:radial-gradient(circle at center,#000,transparent 80%);-webkit-mask-image:radial-gradient(circle at center,#000,transparent 80%)}
+
+.top{position:absolute;left:0;right:0;top:0;padding:clamp(16px,3vw,32px) clamp(18px,4vw,54px);
+display:flex;align-items:center;justify-content:space-between;z-index:10}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:12px;letter-spacing:.28em}
+.brand-mark{width:27px;height:27px;border:1px solid #777;border-radius:9px;display:grid;place-items:center}
+.brand-mark svg{width:14px}
+.top-right{display:flex;align-items:center;gap:10px}
+.clock{text-align:right}
+.clock b{display:block;font-size:13px;letter-spacing:.06em}
+.clock small{color:#555;font-size:8px;letter-spacing:.16em;text-transform:uppercase}
+.circle-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.055);
+border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;transition:.35s var(--ease)}
+.circle-btn:hover,.circle-btn.active{background:#fff;color:#000;transform:translateY(-2px) scale(1.04)}
+.circle-btn svg{width:17px}
+
+.content{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:center;
+padding:clamp(70px,9vw,110px) clamp(18px,6vw,90px) clamp(50px,7vw,78px)}
+.kicker{font-size:9px;letter-spacing:.34em;color:#5e5e63;text-transform:uppercase;margin-bottom:13px;
+opacity:0;transform:translateY(12px);animation:up .7s .35s var(--ease) forwards}
+.hero-title{font-size:clamp(35px,7vw,78px);line-height:.92;letter-spacing:-.055em;font-weight:800;
+max-width:780px;opacity:0;transform:translateY(22px);animation:up .9s .42s var(--ease) forwards}
+.hero-title span{color:#707074}
+.hero-desc{margin-top:17px;color:#777;font-size:clamp(11px,1.4vw,14px);max-width:420px;line-height:1.55;
+opacity:0;transform:translateY(14px);animation:up .8s .52s var(--ease) forwards}
+
+.rail-wrap{margin-top:clamp(30px,5vw,55px);position:relative;min-height:clamp(155px,25vw,220px)}
+.rail{display:flex;gap:clamp(10px,1.7vw,18px);height:100%;overflow:visible;transition:transform .7s var(--ease);
+will-change:transform}
+.card{flex:0 0 clamp(122px,15vw,178px);height:clamp(155px,22vw,205px);position:relative;border-radius:24px;
+background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.025));
+border:1px solid rgba(255,255,255,.10);overflow:hidden;cursor:pointer;
+transition:transform .65s var(--ease),opacity .5s,filter .5s,background .5s;user-select:none}
+.card:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.16),transparent 38%,transparent 70%,rgba(255,255,255,.035));pointer-events:none}
+.card:after{content:"";position:absolute;left:18%;right:18%;bottom:-22px;height:70px;background:#fff;
+filter:blur(35px);opacity:0;transition:.5s}
+.card:not(.selected){opacity:.43;filter:saturate(.2) blur(.2px);transform:scale(.9)}
+.card.selected{transform:translateY(-12px) scale(1.04);background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.035));
+border-color:rgba(255,255,255,.42);box-shadow:0 28px 70px rgba(0,0,0,.65),0 0 35px rgba(255,255,255,.09)}
+.card.selected:after{opacity:.13}
+.card-icon{height:64%;display:grid;place-items:center;position:relative;z-index:1}
+.card-icon svg,.card-icon img{width:clamp(38px,5vw,60px);height:clamp(38px,5vw,60px);object-fit:contain}
+.card-label{position:absolute;left:17px;bottom:16px;z-index:2}
+.card-label b{display:block;font-size:12px;letter-spacing:.01em}
+.card-label small{display:block;margin-top:4px;font-size:8px;color:#666;text-transform:uppercase;letter-spacing:.13em}
+.card-num{position:absolute;right:14px;top:13px;font-size:8px;color:#555;z-index:2}
+.card.active-key{animation:keyPulse .35s var(--ease)}
+
+.controls{display:flex;align-items:center;gap:12px;margin-top:25px;opacity:0;animation:up .8s .65s var(--ease) forwards}
+.primary{height:45px;padding:0 20px;border-radius:14px;background:#fff;color:#000;font-size:10px;font-weight:800;
+letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:.35s var(--ease);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.primary:hover{transform:translateY(-3px);box-shadow:0 14px 38px rgba(255,255,255,.18)}
+.secondary{height:45px;padding:0 18px;border-radius:14px;background:rgba(255,255,255,.045);
+border:1px solid var(--line);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:.35s var(--ease)}
+.secondary:hover{background:rgba(255,255,255,.10);transform:translateY(-2px)}
+.hint{margin-left:auto;color:#4e4e52;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+
+.bottom{position:absolute;left:0;right:0;bottom:0;padding:15px clamp(18px,4vw,54px);
+display:flex;align-items:center;justify-content:space-between;z-index:10;color:#4e4e52;font-size:8px;letter-spacing:.16em;text-transform:uppercase}
+.dots{display:flex;gap:6px;align-items:center}
+.dot{width:5px;height:5px;border-radius:50%;background:#333;transition:.45s var(--ease)}
+.dot.on{width:24px;border-radius:4px;background:#fff;box-shadow:0 0 12px rgba(255,255,255,.5)}
+
+.panel{position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.62);backdrop-filter:blur(20px);
+display:grid;place-items:center;opacity:0;visibility:hidden;transition:.45s var(--ease);padding:20px}
+.panel.open{opacity:1;visibility:visible}
+.panel-box{width:min(680px,94vw);max-height:82vh;overflow:auto;border:1px solid var(--line);
+border-radius:28px;background:rgba(12,12,14,.94);box-shadow:0 35px 100px #000;padding:28px;transform:translateY(20px) scale(.97);transition:.55s var(--ease)}
+.panel.open .panel-box{transform:none}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.panel-head h2{font-size:24px;letter-spacing:-.04em}
+.panel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.setting{padding:16px;border:1px solid rgba(255,255,255,.08);border-radius:17px;background:rgba(255,255,255,.035);
+cursor:pointer;transition:.3s}
+.setting:hover{background:rgba(255,255,255,.09);transform:translateY(-2px)}
+.setting b{display:block;font-size:11px}.setting small{display:block;margin-top:5px;color:#666;font-size:9px}
+.close{background:rgba(255,255,255,.06);border:1px solid var(--line);width:36px;height:36px;border-radius:50%;
+cursor:pointer;display:grid;place-items:center}.close:hover{background:#fff;color:#000}
+
+.toast{position:absolute;left:50%;bottom:58px;z-index:80;transform:translate(-50%,20px);opacity:0;
+padding:12px 17px;border:1px solid var(--line);border-radius:13px;background:rgba(10,10,11,.92);
+font-size:10px;letter-spacing:.08em;pointer-events:none;transition:.4s var(--ease)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+.rotate{display:none;position:absolute;inset:0;z-index:200;background:#000;place-items:center;text-align:center;padding:30px}
+.rotate b{font-size:20px}.rotate p{color:#666;margin-top:8px;font-size:11px}
+@media (orientation:portrait){.rotate{display:grid}#main{filter:blur(4px)}}
+@media(max-width:650px){
+  .hero-title{max-width:560px}.hero-desc{max-width:320px}.hint{display:none}
+  .panel-grid{grid-template-columns:1fr 1fr}.card{flex-basis:125px}
+}
+@media(max-height:600px) and (orientation:landscape){
+  .content{padding-top:62px;padding-bottom:42px}.hero-title{font-size:clamp(31px,6vw,55px)}
+  .hero-desc{margin-top:8px}.rail-wrap{margin-top:18px;min-height:135px}.card{height:140px}
+  .controls{margin-top:12px}.bottom{padding-bottom:9px}.top{padding-top:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+@keyframes markIn{from{opacity:0;transform:rotate(-8deg) scale(.65)}to{opacity:1;transform:rotate(-8deg) scale(1)}}
+@keyframes textIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:none}}
+@keyframes ring{0%,100%{transform:scale(.95);opacity:.3}50%{transform:scale(1.08);opacity:.7}}
+@keyframes up{to{opacity:1;transform:none}}
+@keyframes ambient{from{transform:translate3d(-1%,0,0) scale(1)}to{transform:translate3d(1%,1%,0) scale(1.04)}}
+@keyframes keyPulse{50%{transform:translateY(-12px) scale(1.07)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="noise"></div>
+  <section id="intro">
+    <div class="intro-core">
+      <div class="intro-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+          <circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/>
+          <circle cx="12" cy="12" r="2.5"/>
+        </svg>
+      </div>
+      <div class="intro-name">NOIR</div>
+      <div class="intro-sub">TV ENTERTAINMENT SYSTEM</div>
+      <div class="progress"><i id="progress"></i></div>
+      <div class="progress-row"><span>ИНИЦИАЛИЗАЦИЯ</span><span id="percent">0%</span></div>
+      <div class="intro-status" id="introStatus">Загрузка интерфейса</div>
+    </div>
+  </section>
+
+  <main id="main">
+    <div class="bg" id="bg"></div><div class="grid"></div>
+
+    <header class="top">
+      <div class="brand"><span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/></svg>
+      </span>NOIR TV</div>
+      <div class="top-right">
+        <div class="clock"><b id="time">00:00</b><small id="date">—</small></div>
+        <button class="circle-btn" id="settingsBtn" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56v.09h-2.4v-.09a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.46 15a1.7 1.7 0 0 0-1.56-1.03h-.09v-2.4h.09A1.7 1.7 0 0 0 8.46 10a1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.7-1.7.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 12.73 5.2v-.09h2.4v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.56 1.03h.09v2.4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="content">
+      <div class="kicker">HOME / 01</div>
+      <h1 class="hero-title">Всё нужное.<br><span>В одном экране.</span></h1>
+      <p class="hero-desc">Чистый чёрно-белый интерфейс. Фокус, движение и управление рассчитаны одновременно на пульт, клавиатуру и сенсорный экран.</p>
+
+      <div class="rail-wrap"><div class="rail" id="rail"></div></div>
+
+      <div class="controls">
+        <button class="primary" id="openBtn">Открыть</button>
+        <button class="secondary" id="appsBtn">Все приложения</button>
+        <div class="hint">← → выбор · Enter открыть · Esc назад</div>
+      </div>
+    </section>
+
+    <footer class="bottom">
+      <span>NOIR OS · 16:9 READY</span>
+      <div class="dots" id="dots"></div>
+      <span id="network">SYSTEM READY</span>
+    </footer>
+
+    <div class="panel" id="panel">
+      <div class="panel-box">
+        <div class="panel-head"><h2 id="panelTitle">Настройки</h2><button class="close" id="closePanel">×</button></div>
+        <div class="panel-grid" id="panelGrid"></div>
+      </div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </main>
+  <div class="rotate"><div><b>Поверните экран</b><p>NOIR TV работает в горизонтальном формате 16:9</p></div></div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const apps = [
+ {name:"ИВИ",sub:"КИНО И СЕРИАЛЫ",type:"ivi",url:"https://www.ivi.ru/"},
+ {name:"КиноПоиск",sub:"ФИЛЬМЫ · СЕРИАЛЫ",type:"kp",url:"https://www.kinopoisk.ru/"},
+ {name:"PREMIER",sub:"ПРЕМЬЕРЫ",type:"premier",url:"https://premier.one/"},
+ {name:"YouTube",sub:"ВИДЕО",type:"youtube",url:"https://www.youtube.com/"},
+ {name:"VK Видео",sub:"ВИДЕО · ШОУ",type:"vk",url:"https://vkvideo.ru/"},
+ {name:"Браузер",sub:"ИНТЕРНЕТ",type:"browser",url:"https://www.google.com/"},
+ {name:"Музыка",sub:"МУЗЫКА",type:"music",url:"https://music.yandex.ru/"},
+ {name:"Игры",sub:"РАЗВЛЕЧЕНИЯ",type:"games",local:true},
+ {name:"Настройки",sub:"СИСТЕМА",type:"settings",local:true}
+];
+
+const rail=document.getElementById("rail"), dots=document.getElementById("dots"), bg=document.getElementById("bg");
+const toast=document.getElementById("toast"), panel=document.getElementById("panel");
+let index=0, toastTimer=0, panelOpen=false, touchX=0, touchY=0, touchMoved=false;
+
+const icons = {
+  ivi:`<svg viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="14" stroke="white" stroke-width="4"/><path d="M22 42V22l20 20V22" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  kp:`<svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="24" stroke="white" stroke-width="4"/><path d="M25 21v22l18-11-18-11Z" fill="white"/></svg>`,
+  premier:`<svg viewBox="0 0 64 64" fill="none"><rect x="9" y="9" width="46" height="46" rx="12" stroke="white" stroke-width="4"/><path d="M23 43V21h11c7 0 10 4 10 9s-3 9-10 9h-6" stroke="white" stroke-width="4" stroke-linecap="round"/></svg>`,
+  youtube:`<svg viewBox="0 0 64 64" fill="none"><rect x="7" y="15" width="50" height="34" rx="10" stroke="white" stroke-width="4"/><path d="m28 24 13 8-13 8V24Z" fill="white"/></svg>`,
+  vk:`<svg viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="14" stroke="white" stroke-width="4"/><path d="M18 24c3 11 9 17 17 17h1V30c0-3 2-4 5-3 3 1 5 3 7 6l6 8h-8l-5-6c-2-2-3-2-3 1v5h-4c-10 0-17-6-20-17h4Z" fill="white"/></svg>`,
+  browser:`<svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="23" stroke="white" stroke-width="4"/><path d="M10 32h44M32 9c7 7 10 15 10 23s-3 16-10 23c-7-7-10-15-10-23s3-16 10-23Z" stroke="white" stroke-width="3"/></svg>`,
+  music:`<svg viewBox="0 0 64 64" fill="none"><path d="M43 16v29.5a8 8 0 1 1-5-7.4V22l20-5v25.5a8 8 0 1 1-5-7.4V12L43 16Z" fill="white"/></svg>`,
+  games:`<svg viewBox="0 0 64 64" fill="none"><path d="M18 25h28c8 0 12 7 10 15l-3 11c-1 4-6 5-9 2l-7-7H27l-7 7c-3 3-8 2-9-2L8 40c-2-8 2-15 10-15Z" stroke="white" stroke-width="4"/><path d="M22 33v10M17 38h10M42 35h.1M49 41h.1" stroke="white" stroke-width="4" stroke-linecap="round"/></svg>`,
+  settings:`<svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="8" stroke="white" stroke-width="4"/><path d="M51 36a20 20 0 0 0 0-8l5-4-5-9-6 2a20 20 0 0 0-7-4l-1-6H27l-1 6a20 20 0 0 0-7 4l-6-2-5 9 5 4a20 20 0 0 0 0 8l-5 4 5 9 6-2a20 20 0 0 0 7 4l1 6h10l1-6a20 20 0 0 0 7-4l6 2 5-9-5-4Z" stroke="white" stroke-width="3"/></svg>`
+};
+
+function build(){
+  rail.innerHTML=""; dots.innerHTML="";
+  apps.forEach((a,i)=>{
+    const c=document.createElement("article"); c.className="card"; c.dataset.i=i; c.tabIndex=0;
+    c.innerHTML=`<div class="card-num">${String(i+1).padStart(2,"0")}</div><div class="card-icon">${icons[a.type]}</div><div class="card-label"><b>${a.name}</b><small>${a.sub}</small></div>`;
+    c.addEventListener("click",()=>{select(i); if(index===i) openCurrent()});
+    c.addEventListener("dblclick",openCurrent);
+    rail.appendChild(c);
+    const d=document.createElement("i");d.className="dot";d.onclick=()=>select(i);dots.appendChild(d);
+  });
+  select(0,false);
+}
+
+function select(i,animate=true){
+  index=(i+apps.length)%apps.length;
+  [...rail.children].forEach((c,n)=>c.classList.toggle("selected",n===index));
+  [...dots.children].forEach((d,n)=>d.classList.toggle("on",n===index));
+  const cards=[...rail.children], active=cards[index];
+  if(active){
+    const offset=rail.parentElement.clientWidth/2-(active.offsetLeft+active.offsetWidth/2);
+    rail.style.transform=`translate3d(${offset}px,0,0)`;
+  }
+  const a=apps[index];
+  bg.style.background=`radial-gradient(circle at ${20+index*9}% ${38+(index%3)*8}%,rgba(255,255,255,.11),transparent 27%),radial-gradient(circle at 80% 90%,rgba(255,255,255,.035),transparent 30%),linear-gradient(180deg,#0a0a0c,#030303 70%)`;
+  if(animate){cards[index].classList.remove("active-key");void cards[index].offsetWidth;cards[index].classList.add("active-key")}
+}
+
+function openCurrent(){
+  const a=apps[index];
+  if(a.local){
+    if(a.type==="settings"){openPanel("Настройки",[
+      ["Экран","Автоадаптация 16:9","Разрешение определяется CSS"],
+      ["Управление","Пульт / клавиатура","Стрелки + Enter + Esc"],
+      ["Сенсор","Свайпы включены","← → для навигации"],
+      ["Анимации","Плавные","Cubic-bezier интерфейс"],
+      ["Звук","Системный","Громкость устройства"],
+      ["Система","NOIR TV","Standalone HTML"]
+    ]);return}
+    showToast("Раздел «Игры» готовится");
+    return;
+  }
+  showToast("Открываем "+a.name);
+  setTimeout(()=>{location.href=a.url},180);
+}
+
+function openPanel(title,items){
+  panelOpen=true;document.getElementById("panelTitle").textContent=title;
+  const grid=document.getElementById("panelGrid");grid.innerHTML="";
+  items.forEach(x=>{const el=document.createElement("div");el.className="setting";el.innerHTML=`<b>${x[0]}</b><small>${x[1]}<br>${x[2]}</small>`;grid.appendChild(el)});
+  panel.classList.add("open");
+}
+function closePanel(){panelOpen=false;panel.classList.remove("open")}
+function showToast(text){
+  clearTimeout(toastTimer);toast.textContent=text;toast.classList.add("show");
+  toastTimer=setTimeout(()=>toast.classList.remove("show"),1700);
+}
+
+document.getElementById("openBtn").onclick=openCurrent;
+document.getElementById("appsBtn").onclick=()=>openPanel("Все приложения",apps.map(a=>[a.name,a.sub,a.local?"Встроенный раздел":"Веб-приложение"]));
+document.getElementById("settingsBtn").onclick=()=>openPanel("Настройки",[
+ ["Экран","16:9","Автоматическая адаптация"],
+ ["Навигация","Пульт / клавиатура","← → ↑ ↓ · Enter · Esc"],
+ ["Сенсор","Свайп","Проведите по карточкам"],
+ ["NOIR OS","v1.0","Standalone launcher"]
+]);
+document.getElementById("closePanel").onclick=closePanel;
+panel.addEventListener("click",e=>{if(e.target===panel)closePanel()});
+
+document.addEventListener("keydown",e=>{
+  if(panelOpen){if(e.key==="Escape"||e.key==="Backspace"){e.preventDefault();closePanel()}return}
+  if(["ArrowRight","ArrowLeft","ArrowUp","ArrowDown","Enter"," "].includes(e.key))e.preventDefault();
+  if(e.key==="ArrowRight")select(index+1);
+  else if(e.key==="ArrowLeft")select(index-1);
+  else if(e.key==="Enter"||e.key===" ")openCurrent();
+  else if(e.key==="Escape"||e.key==="Backspace")showToast("Вы уже на главном экране");
+  else if(e.key==="s"||e.key==="S")document.getElementById("settingsBtn").click();
+});
+
+rail.addEventListener("touchstart",e=>{touchX=e.touches[0].clientX;touchY=e.touches[0].clientY;touchMoved=false},{passive:true});
+rail.addEventListener("touchmove",e=>{if(Math.abs(e.touches[0].clientX-touchX)>8)touchMoved=true},{passive:true});
+rail.addEventListener("touchend",e=>{
+  const dx=e.changedTouches[0].clientX-touchX,dy=e.changedTouches[0].clientY-touchY;
+  if(Math.abs(dx)>35&&Math.abs(dx)>Math.abs(dy)){select(index+(dx<0?1:-1))}
+},{passive:true});
+
+window.addEventListener("resize",()=>select(index,false));
+window.addEventListener("orientationchange",()=>setTimeout(()=>select(index,false),120));
+
+function clock(){
+  const d=new Date();
+  document.getElementById("time").textContent=d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("date").textContent=d.toLocaleDateString("ru-RU",{weekday:"short",day:"2-digit",month:"short"});
+}
+setInterval(clock,1000);clock();build();
+
+function intro(){
+  const bar=document.getElementById("progress"),pct=document.getElementById("percent"),status=document.getElementById("introStatus");
+  const states=[[18,"Проверка дисплея"],[37,"Загрузка интерфейса"],[56,"Подготовка приложений"],[74,"Синхронизация управления"],[91,"Оптимизация анимаций"],[100,"ГОТОВО"]];
+  let step=0, value=0;
+  const timer=setInterval(()=>{
+    const target=states[Math.min(step,states.length-1)][0];
+    value+=Math.max(.7,(target-value)*.18);
+    if(value>=target){value=target;status.textContent=states[Math.min(step,states.length-1)][1];step++}
+    bar.style.width=Math.min(100,value)+"%";pct.textContent=Math.floor(Math.min(100,value))+"%";
+    if(value>=100){
+      clearInterval(timer);
+      setTimeout(()=>{document.getElementById("intro").classList.add("done");document.getElementById("main").classList.add("ready")},520);
+    }
+  },35);
+}
+intro();
+})();
+</script>
+</body>
+</html>
